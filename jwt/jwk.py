@@ -3,7 +3,8 @@ import base64
 
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Signature import pss, pkcs1_15 as pkcs1_15_sig
-from Cryptodome.Hash import SHA256
+from Cryptodome.Hash import SHA256,SHA384,SHA512,HMAC
+from Cryptodome.Random import get_random_bytes
 
 def base64url_encode(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
@@ -82,6 +83,214 @@ class JWK:
 
         # Call the implementation
         return self._verify(payload, signature, alg = alg)
+
+class JWK_Shared(JWK):
+    def __init__(
+        self,
+        secret,
+        use = None,
+        key_ops = None,
+        alg = None,
+        kid = None
+    ):
+        super().__init__(
+            kty = "oct",
+            use = use,
+            key_ops = key_ops,
+            alg = alg,
+            kid = kid
+        )
+
+        self._secret = secret
+
+        self._alg_sig_default = "HS256"
+
+    def get_sign_alg(self):
+        if self._alg is not None:
+            return self._alg
+        else:
+            return self._alg_sig_default
+
+    def to_json(self, indent = None):
+        jwk = {
+            "kty" :     self._kty,
+            "k" :       base64url_encode(self._secret),
+            "use":      self._use,
+            "key_ops":  self._key_ops,
+            "alg":      self._alg,
+            "kid":      self._kid
+        }
+
+        return json.dumps(jwk, indent=indent)
+
+    def _sign(self, payload, alg = None):
+        # "alg" for shared secrets can be:
+        #   HS256       SHA256
+        #   HS384       SHA384
+        #   HS512       SHA512
+
+        if alg is None:
+            # If there is an algorithm specified for this key we strictly use
+            # that one if its not overriden during the signature request
+
+            if self._alg is not None:
+                alg = self._alg
+            else:
+                alg = self._alg_sig_default
+        else:
+            # We have an alg. override - we just use that one
+            pass
+
+        if alg not in [ "HS256", "HS384", "HS512" ]:
+            raise ValueError(f"Unknown algorithm {alg} for Shared key")
+
+        # Use and key_ops is checked by base class sign() function
+
+        if alg == "HS256":
+            # HS256
+            h = HMAC.new(self._secret, digestmod=SHA256) 
+            h.update(payload)
+            sig = h.digest()
+            return sig
+        elif alg == "HS384":
+            # HS384
+            h = HMAC.new(self._secret, digestmod=SHA384) 
+            h.update(payload)
+            sig = h.digest()
+            return sig
+        elif alg == "HS512":
+            # HS512
+            h = HMAC.new(self._secret, digestmod=SHA512) 
+            h.update(payload)
+            sig = h.digest()
+            return sig
+        else:
+            raise ValueError(f"Alg parameter contains unknown algorithm {self._alg}")
+
+    def _verify(self, payload, signature, alg = None):
+        from jws import JWSValidation
+        # "alg" for RSA can be:
+        #   HS256       SHA256
+        #   HS384       SHA384
+        #   HS512       SHA512
+
+        if alg is None:
+            # If there is an algorithm specified for this key we strictly use
+            # that one if its not overriden during the signature request
+
+            if self._alg is not None:
+                alg = self._alg
+            else:
+                alg = self._alg_sig_default
+        else:
+            # We have an alg. override - we just use that one
+            pass
+
+        if alg not in [ "HS256", "HS385", "HS512" ]:
+            return JWSValidation.INVALID
+
+        if alg == "HS256":
+            h = HMAC.new(self._secret, digestmod=SHA256) 
+            h.update(payload)
+            try:
+                h.verify(signature)
+                return JWSValidation.VALID
+            except ValueError as e:
+                return JWSValidation.INVALID
+        elif alg == "HS384":
+            h = HMAC.new(self._secret, digestmod=SHA384) 
+            h.update(payload)
+            try:
+                h.verify(signature)
+                return JWSValidation.VALID
+            except ValueError as e:
+                return JWSValidation.INVALID
+        elif alg == "HS512":
+            h = HMAC.new(self._secret, digestmod=SHA512) 
+            h.update(payload)
+            try:
+                h.verify(signature)
+                return JWSValidation.VALID
+            except ValueError as e:
+                return JWSValidation.INVALID
+        else:
+            return JWSValidation.INVALID
+
+    @staticmethod
+    def from_json(jsondata):
+        if not isinstance(jsondata, dict):
+            jsondata = json.loads(jsondata)
+
+        if ("kty" not in jsondata) or ("k" not in jsondata) or (("use" not in jsondata) and ("key_ops" not in jsondata)):
+            raise ValueError("Invalid JSON object for octet key (missing kty, k, use or key_ops)")
+        if jsondata["kty"].upper() != "OCT":
+            raise ValueError(f"Key type {jsondata['kty']} is not Octet, cannot parse Octet object")
+
+        # Recover key object if possible
+
+        use = None
+        key_ops = None
+        alg = None
+        kid = None
+
+        if "use" in jsondata:
+            use = jsondata["use"]
+        if "key_ops" in jsondata:
+            key_ops = jsondata["key_ops"]
+        if "alg" in jsondata:
+            alg = jsondata["alg"]
+        if "kid" in jsondata:
+            kid = jsondata["kid"]
+
+        secret = base64url_decode(jsondata["k"])
+
+        return JWK_Shared(secret, use, key_ops, alg, kid)
+
+    @staticmethod
+    def create(
+        secret = None,
+        key_id = None,
+        use = None,
+        key_ops = None,
+        alg = None
+    ):
+        if (use is not None) and (key_ops is not None):
+            raise ValueError("Either use or key_ops has to be specified, not both")
+
+        if (use is not None) and (use not in [ "sig", "enc" ]):
+            raise ValueError(f"Unsupported usage {use}, supported values are sig and enc")
+
+        if (key_ops is not None):
+            if not isinstance(key_ops, list):
+                raise ValueError("key_ops has to be a list")
+            for kop in key_ops:
+                if kop not in [
+                    "sign",
+                    "verify",
+                    "encrypt",
+                    "decrypt",
+                    "wrapKey",
+                    "unwrapKey",
+                    "deriveKey",
+                    "deriveBits"
+                ]:
+                    raise ValueError(f"Unsupported key operation {kop}")
+
+        # If no shared secret is specified we create one
+        if secret is None:
+            secret = get_random_bytes(32)
+
+        # And create the class instance ...
+        res = JWK_Shared(
+            secret,
+            use = use,
+            key_ops = key_ops,
+            kid = key_id,
+            alg = alg
+        )
+
+        return res
+    
 
 class JWK_RSA(JWK):
     def __init__(
