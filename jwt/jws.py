@@ -149,6 +149,51 @@ class JWS:
     def get_payload(self):
         return self._payload
 
+    def add_signature(
+        self,
+        key,
+        add_kids = True,
+        alg = None
+    ):
+        if not isinstance(key, JWK):
+            raise ValueError("Signature key has to be a JWK instance")
+
+        if self._compact:
+            raise ValueError("Compact JWS can only contain a single signature")
+
+        # Determine cty and typ values from other headers
+        
+        typ = self._payloadtype
+        cty = None
+        for h in self._headers:
+            if "cty" in h:
+                cty = h["cty"]
+                break
+
+        # Create new header (optionally including kid) matching the new key
+        newhead = {
+            "alg" : key.get_sign_alg(),
+            "typ" : typ
+        }
+        if alg is not None:
+            newhead["alg"] = alg
+        if cty is not None:
+            newhead["cty"] = cty
+        if add_kids and (key._kid is not None):
+            newhead["kid"] = key._kid
+
+        # Actually generate the signature
+        header_enc = base64url_encode((json.dumps(newhead)).encode('utf-8'))
+        dts = f"{header_enc}.{self._payload_encoded}".encode("utf-8")
+        sig = base64url_encode(key.sign(dts, alg = alg))
+        #    validstate.append(JWSValidation.SIGNED)
+
+        # Add signature and new protected header as well as validstate to list
+        self._headers.append(header_enc)
+        self._signatures.append(sig)
+        self._validstate.append(JWSValidation.SIGNED)
+        self._headers_unsigned.append(None)
+
     def __repr__(self):
         cp = self._compact
         self._compact = False
