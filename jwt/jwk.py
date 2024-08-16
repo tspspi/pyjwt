@@ -2,8 +2,9 @@ import json
 import base64
 
 from Cryptodome.PublicKey import RSA
+from Cryptodome.Cipher import PKCS1_v1_5, PKCS1_OAEP, AES
 from Cryptodome.Signature import pss, pkcs1_15 as pkcs1_15_sig
-from Cryptodome.Hash import SHA256,SHA384,SHA512,HMAC
+from Cryptodome.Hash import SHA1, SHA256, SHA384, SHA512, HMAC
 from Cryptodome.Random import get_random_bytes
 
 def base64url_encode(data):
@@ -317,6 +318,7 @@ class JWK_RSA(JWK):
         self._key =             key
 
         self._alg_sig_default = "PS256"
+        self._alg_enc_default = "RSA-OAEP-256"
 
     def get_sign_alg(self):
         if self._alg is not None:
@@ -469,6 +471,90 @@ class JWK_RSA(JWK):
             return sig
         else:
             raise ValueError(f"Alg parameter contains unknown algorithm {self._alg}")
+
+    def _encrypt(self, payload, alg = None):
+        # "alg" parameter can be:
+        #   RSA1_5
+        #   RSA-OAEP            SHA1 (?!?!insane)
+        #   RSA-OAEP-256        SHA256
+
+        if alg is None:
+            # If there is an algorithm specified for this key we strictly use
+            # that one if its not overriden during the signature request
+
+            if self._alg is not None:
+                alg = self._alg
+            else:
+                alg = self._alg_enc_default
+        else:
+            # We have an alg. override - we just use that one
+            pass
+
+        if alg not in ["RSA1_5", "RSA-OAEP-256", "RSA-OAEP"]:
+            raise ValueError(f"Algorithm {alg} is not supported for encryption with RSA")
+
+        if alg == "RSA-OAEP-256":
+            cipher = PKCS1_OAEP.new(self._key.publickey(), hashAlgo=SHA256)
+            enc = cipher.encrypt(payload)
+            return enc
+        elif alg == "RSA-OAEP":
+            cipher = PKCS1_OAEP.new(self._key.publickey(), hashAlgo=SHA1)
+            enc = cipher.encrypt(payload)
+            return enc
+        elif alg == "RSA1_5":
+            cipher = PKCS1_v1_5.new(self._key.publickey())
+            enc = cipher.encrypt(payload)
+            return enc
+        else:
+            raise ValueError(f"Invalid algorithm parameter {alg}")
+
+    def _decrypt(self, payload, alg = None):
+        # "alg" parameter can be:
+        #   RSA1_5
+        #   RSA-OAEP            SHA1 (?!?!insane)
+        #   RSA-OAEP-256        SHA256
+
+        if alg is None:
+            # If there is an algorithm specified for this key we strictly use
+            # that one if its not overriden during the signature request
+
+            if self._alg is not None:
+                alg = self._alg
+            else:
+                alg = self._alg_enc_default
+        else:
+            # We have an alg. override - we just use that one
+            pass
+
+        if alg not in ["RSA1_5", "RSA-OAEP-256", "RSA-OAEP"]:
+            raise ValueError(f"Algorithm {alg} is not supported for encryption with RSA")
+
+        if alg == "RSA-OAEP-256":
+            cipher = PKCS1_OAEP.new(self._key, hashAlgo=SHA256)
+            enc = None
+            try:
+                enc = cipher.decrypt(payload)
+            except:
+                enc = None
+            return enc
+        elif alg == "RSA-OAEP":
+            cipher = PKCS1_OAEP.new(self._key, hashAlgo=SHA1)
+            enc = None
+            try:
+                enc = cipher.decrypt(payload)
+            except:
+                enc = None
+            return enc
+        elif alg == "RSA1_5":
+            cipher = PKCS1_v1_5.new(self._key)
+            enc = None
+            try:
+                enc = cipher.decrypt(payload)
+            except:
+                enc = None
+            return enc
+        else:
+            raise ValueError(f"Invalid algorithm parameter {alg}")
  
     def to_json(self, indent = None):
         pubkey = self._key.publickey()
