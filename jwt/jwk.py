@@ -59,6 +59,26 @@ class JWK:
     def get_id(self):
         return self._kid
 
+    def encrypt(self, payload, alg = None):
+        if self._use is not None:
+            if self._use != "enc":
+                raise ValueError("Encryption is not the intended key use for this key")
+        if self._key_ops is not None:
+            if "encrypt" not in self._key_ops:
+                raise ValueError("Encryption is not the intended key operation with this key")
+
+        return self._encrypt(payload, alg)
+ 
+    def decrypt(self, payload, alg = None):
+        if self._use is not None:
+            if self._use != "enc":
+                raise ValueError("Decryption is not the intended key use for this key")
+        if self._key_ops is not None:
+            if "decrypt" not in self._key_ops:
+                raise ValueError("Decryption is not the intended key operation with this key")
+
+        return self._decrypt(payload, alg)
+
     def sign(self, payload, alg = None):
         # First check use or key_ops to check if we can be used for signature ...
         if self._use is not None:
@@ -84,6 +104,7 @@ class JWK:
 
         # Call the implementation
         return self._verify(payload, signature, alg = alg)
+
 
 class JWK_Shared(JWK):
     def __init__(
@@ -325,6 +346,12 @@ class JWK_RSA(JWK):
             return self._alg
         else:
             return self._alg_sig_default
+
+    def get_enc_alg(self):
+        if self._alg is not None:
+            return self._alg
+        else:
+            return self._alg_enc_default
 
     def _verify(self, payload, signature, alg = None):
         from jws import JWSValidation
