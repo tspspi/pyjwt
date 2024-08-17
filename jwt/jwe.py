@@ -1,8 +1,252 @@
+import json
+import base64
+
+from jwk import JWK
+
+from Cryptodome.Random import get_random_bytes
+from Cryptodome.Cipher import AES
+from Cryptodome.Hash import SHA1, SHA256, SHA384, SHA512, HMAC
+
+def base64url_encode(data):
+    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+
+def base64url_decode(data):
+    padding = '=' * (4 - (len(data) % 4))
+    return base64.urlsafe_b64decode(data + padding)
+
 class JWE:
     def __init__(
-        self
+        self,
+
+        protected_header = None,
+        encrypted_key = None,
+        iv = None,
+        ciphertext = None,
+        auth_tag = None,
+
+        recipients = None,
+
+        payload_raw = None,
+        cty = None,
+        alg = None,
+        enc = None,
+        typ = None,
+
+        compact = None
     ):
-        pass
+        self._payload_raw = payload_raw
+
+        self._protected_header = protected_header
+        self._encrypted_key = encrypted_key         # Only in compact
+        self._iv = iv
+        self._ciphertext = ciphertext
+        self._auth_tag = auth_tag
+        self._recipients = recipients
+        self._cty = cty
+        self._alg = alg
+        self._enc = enc
+
+        self._compact = compact
+
+    def to_json(self, indent = None):
+        if self._compact is None:
+            return json.dumps({
+                "protected" : self._protected_header,
+                "recipients" : self._recipients,
+                "iv" : self._iv,
+                "ciphertext" : self._ciphertext,
+                "tag" : self._auth_tag
+            }, indent = indent)
+        else:
+            return self._compact
+
+    @staticmethod
+    def parse(jdata, keystore = None):
+        jdata_ori = jdata
+        # Check if it's compact serialziation
+
+        if isinstance(jdata, str):
+            parts = jdata.split(".")
+            if len(parts) == 5:
+                # This is compact serialization
+                # Since this works somewhat different than decoding using the JSON serialization
+                # we implement this here in parallel
+
+                phdr = json.loads(base64url_decode(parts[0]))
+                encrypted_key = base64url_decode(parts[1])
+                iv = base64url_decode(parts[2])
+                ciphertext = base64url_decode(parts[3])
+                tag = base64url_decode(parts[4])
+
+                if "enc" not in phdr:
+                    raise ValueError("enc property not defined in protected header, not a JWE")
+
+                if phdr["enc"] not in [ "A128GCM", "A192GCM", "A256GCM" ]:
+                    raise ValueError(f"Content encryption algorithm {enc} not supported")
+
+                cty = None
+                if "cty" in phdr:
+                    cty = phdr["cty"]
+                alg = None
+                if "alg" in phdr:
+                    alg = phdr["alg"]
+                typ = None
+                if "typ" in phdr:
+                    typ = phdr["typ"]
+
+                # Locate the correct key either by iterating over all
+                # keys available for decryption or by looking up using the KID.
+                # If we have no keystore we cannot decrypt ...
+                decrypted_payload = None
+
+                if keystore is not None:
+                    cek = None
+                    if "kid" in phdr:
+                        # We search for the keys with the specific KID
+                        for k in keystore.iterate_by_id(phdr["kid"], "enc", "decrypt"):
+                            curalg = None
+                            if "alg" in phdr:
+                                curalg = phdr["alg"]
+                            try:
+                                cek = k["key"].decrypt(encrypted_key, alg = curalg)
+                                if cek is not None:
+                                    break
+                            except Exception as e:
+                                print(e)
+                                continue
+                    else:
+                        for k in keystore.iterate("enc", "decrypt"):
+                            curalg = None
+                            if "alg" in phdr:
+                                curalg = phdr["alg"]
+                            try:
+                                cek = k.decrypt(encrypted_key, alg = curalg)
+                                if cek is not None:
+                                    break
+                            except:
+                                continue
+ 
+                if cek is not None:
+                    cipher = AES.new(cek, AES.MODE_GCM, nonce = iv)
+                    cipher.update(parts[0].encode("utf-8"))
+                    decrypted_payload = cipher.decrypt_and_verify(ciphertext, tag)
+                    decrypted_payload = base64url_decode(decrypted_payload.decode("utf-8"))
+
+                if (cty is not None) and (decrypted_payload is not None):
+                    if cty == "application/json":
+                        decrypted_payload = json.loads(decrypted_payload.decode("utf-8"))
+                    # ToDo
+
+                return JWE(
+                    parts[0],
+                    parts[1],
+                    parts[2],
+                    parts[3],
+                    parts[4],
+
+                    None,
+
+                    decrypted_payload,
+
+                    cty,
+                    alg,
+                    phdr["enc"],
+                    typ,
+                    jdata_ori
+                )
+
+        if not isinstance(jdata, dict):
+            jdata = json.loads(jdata)
+
+        # Read the protected header ...
+        if "protected" not in jdata:
+            raise ValueError("Protected header not found")
+
+        protected_header = jdata["protected"]
+
+        phdr = json.loads(base64url_decode(jdata["protected"]))
+        if "enc" not in phdr:
+            raise ValueError("Protected header has no enc property, not a JWE")
+
+        if phdr["enc"] not in [ "A128GCM", "A192GCM", "A256GCM" ]:
+            raise ValueError(f"Content encryption algorithm {enc} not supported")
+
+        iv = base64url_decode(jdata["iv"])
+        ciphertext = base64url_decode(jdata["ciphertext"])
+        tag = base64url_decode(jdata["tag"])
+
+        cty = None
+        if "cty" in phdr:
+            cty = phdr["cty"]
+        alg = None
+        if "alg" in phdr:
+            alg = phdr["alg"]
+        typ = None
+        if "typ" in phdr:
+            typ = phdr["typ"]
+
+        # Locate the correct key either by iterating over all
+        # keys available for decryption or by looking up using the KID.
+        # If we have no keystore we cannot decrypt ...
+        decrypted_payload = None
+        if keystore is not None:
+            cek = None
+            for recp in jdata["recipients"]:
+                curalg = None
+                curkid = None
+                if "alg" in recp["header"]:
+                    curalg = recp["header"]["alg"]
+                if "kid" in recp["header"]:
+                    curkid = recp["header"]["kid"]
+
+                if curkid is not None:
+                    for k in keystore.iterate_by_id(curkid, "enc", "decrypt"):
+                        try:
+                            cek = k["key"].decrypt(base64url_decode(recp["encrypted_key"]), alg = curalg)
+                            if cek is not None:
+                                break
+                        except Exception as e:
+                            print(e)
+                            continue
+                else:
+                    for k in keystore.iterate("enc", "decrypt"):
+                        try:
+                            cek = k.decrypt(base64url_decode(recp["encrypted_key"]), alg = curalg)
+                            if cek is not None:
+                                break
+                        except:
+                            continue
+
+                if cek is not None:
+                    break
+
+        if cek is not None:
+            cipher = AES.new(cek, AES.MODE_GCM, nonce = iv)
+            cipher.update(jdata["protected"].encode("utf-8"))
+            decrypted_payload = cipher.decrypt_and_verify(ciphertext, tag)
+            decrypted_payload = base64url_decode(decrypted_payload.decode("utf-8"))
+
+        if (cty is not None) and (decrypted_payload is not None):
+            if cty == "application/json":
+                decrypted_payload = json.loads(decrypted_payload.decode("utf-8"))
+
+        return JWE(
+            jdata["protected"],
+            None,
+            jdata["iv"],
+            jdata["ciphertext"],
+            jdata["tag"],
+
+            jdata["recipients"],
+
+            decrypted_payload,
+
+            cty,
+            alg,
+            phdr["enc"],
+            typ,
+            jdata_ori
+        )
 
     @staticmethod
     def create(
@@ -12,7 +256,8 @@ class JWE:
         alg = None,
         enc = None,
         compact = False,
-        add_kids = True
+        add_kids = True,
+        typ = "JWT"
     ):
         # Validate parameters
         if not isinstance(recipient_keys, list):
@@ -51,6 +296,7 @@ class JWE:
             else:
                 raise ValueError("Content type not specified and not auto-detectable")
 
+        payload_raw = payload
         if isinstance(payload, dict):
             payload = base64url_encode(json.dumps(payload).encode("utf-8"))
         elif isinstance(payload, JWS) or isinstance(payload, JWE):
@@ -112,8 +358,14 @@ class JWE:
 
 
         genheader = {
+            "typ" : typ,
             "enc" : enc
         }
+
+        if cty is not None:
+            genheader.update({
+                "cty" : cty
+            })
 
         if compact:
             genheader.update({
@@ -130,10 +382,10 @@ class JWE:
 
         # For each recipient encrypt the CEK and add to our recipients array
         recipients = []
-        for ik, k in recipient_keys:
-            newenccek = k._encrypt(cek, alg = alg[ik])
+        for ik, k in enumerate(recipient_keys):
+            newenccek = k.encrypt(cek, alg = alg[ik])
             recipients.append({
-                "header" : { "alg" : alg[ik] }
+                "header" : { "alg" : alg[ik] },
                 "encrypted_key" : base64url_encode(newenccek)
             })
             if add_kids and (k._kid is not None):
@@ -144,23 +396,47 @@ class JWE:
         # Encrypt AES payload. Include the generic header as AAD; Store IV too ...
         iv = get_random_bytes(12)
         cipher = AES.new(cek, AES.MODE_GCM, nonce=iv)
-        cipher.udpate(encoded_header.encode("utf-8"))
-        ciphertext, tag = cipher.encrypt_and_digest(payload)
+        cipher.update(encoded_header.encode("utf-8"))
+        ciphertext, tag = cipher.encrypt_and_digest(payload.encode("utf-8"))
 
         # Either build compact serialization or initialize our local structures for JSON
         encoded_iv = base64url_encode(iv)
         encoded_ciphertext = base64url_encode(ciphertext)
         encoded_tag = base64url_encode(tag)
 
-
-        # ToDo: Dont use self here ...
         if compact:
             # Store data for compact serialization
             compact_serialization = f"{encoded_header}.{recipients[0]['encrypted_key']}.{encoded_iv}.{encoded_ciphertext}.{encoded_tag}"
+            return JWE(
+                encoded_header,
+                recipients[0]['encrypted_key'],
+                encoded_iv,
+                encoded_ciphertext,
+                encoded_tag,
+                recipients,
+
+                payload_raw,
+
+                cty,
+                alg,
+                enc,
+                typ,
+
+                compact_serialization
+            )
         else:
-            # Store data for JSON serialization
-            #encoded_ciphertext
-            #encoded_tag
-            #encoded_iv
-            #encoded_header
-            pass
+            return JWE(
+                encoded_header,
+                recipients[0]['encrypted_key'],
+                encoded_iv,
+                encoded_ciphertext,
+                encoded_tag,
+                recipients,
+
+                payload_raw,
+
+                cty,
+                alg,
+                enc,
+                typ
+            )
