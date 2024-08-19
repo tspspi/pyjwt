@@ -105,6 +105,18 @@ class JWK:
         # Call the implementation
         return self._verify(payload, signature, alg = alg)
 
+    @staticmethod
+    def from_json(jdata):
+        # We check which algorithm is specified in the JWK
+        if not isinstance(jdata, dict):
+            jdata = json.loads(jdata)
+
+        if jdata["kty"] == "RSA":
+            return JWK_RSA.from_json(jdata)
+        elif jdata["kty"] == "oct":
+            return JWK_Shared.from_json(jdata)
+        else:
+            raise ValueError(f"Unknown key type {jdata['kty']}")
 
 class JWK_Shared(JWK):
     def __init__(

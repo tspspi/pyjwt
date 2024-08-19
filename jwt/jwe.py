@@ -60,6 +60,9 @@ class JWE:
         else:
             return self._compact
 
+    def get_payload(self):
+        return self._payload_raw
+
     @staticmethod
     def parse(jdata, keystore = None):
         jdata_ori = jdata
@@ -135,7 +138,10 @@ class JWE:
                 if (cty is not None) and (decrypted_payload is not None):
                     if cty == "application/json":
                         decrypted_payload = json.loads(decrypted_payload.decode("utf-8"))
-                    # ToDo
+                    elif cty == "JWT":
+                        decrypted_payload = parse_jwt(decrypted_payload, keystore)
+                    elif cty == "jwk+json":
+                        decrypted_payload = JWK.from_json(decrypted_payload)
 
                 return JWE(
                     parts[0],
@@ -224,11 +230,15 @@ class JWE:
             cipher = AES.new(cek, AES.MODE_GCM, nonce = iv)
             cipher.update(jdata["protected"].encode("utf-8"))
             decrypted_payload = cipher.decrypt_and_verify(ciphertext, tag)
-            decrypted_payload = base64url_decode(decrypted_payload.decode("utf-8"))
+            decrypted_payload = decrypted_payload.decode("utf-8")
 
         if (cty is not None) and (decrypted_payload is not None):
             if cty == "application/json":
-                decrypted_payload = json.loads(decrypted_payload.decode("utf-8"))
+                decrypted_payload = json.loads(base64url_decode(decrypted_payload.decode("utf-8")))
+            elif cty == "JWT":
+                decrypted_payload = parse_jwt(decrypted_payload, keystore)
+            elif cty == "jwk+json":
+                decrypted_payload = JWK.from_json(decrypted_payload)
 
         return JWE(
             jdata["protected"],
@@ -259,6 +269,9 @@ class JWE:
         add_kids = True,
         typ = "JWT"
     ):
+        # We import here to resolve problems with circular imports
+        from jws import JWS
+
         # Validate parameters
         if not isinstance(recipient_keys, list):
             recipient_keys = [ recipient_keys, ]
@@ -298,7 +311,7 @@ class JWE:
 
         payload_raw = payload
         if isinstance(payload, dict):
-            payload = base64url_encode(json.dumps(payload).encode("utf-8"))
+            payload = base64url_encode(json.dumps(payload).encode("utf-8")).encode("utf-8")
         elif isinstance(payload, JWS) or isinstance(payload, JWE):
             payload = payload.to_json().encode("utf-8")
         elif isinstance(payload, str):
@@ -397,7 +410,7 @@ class JWE:
         iv = get_random_bytes(12)
         cipher = AES.new(cek, AES.MODE_GCM, nonce=iv)
         cipher.update(encoded_header.encode("utf-8"))
-        ciphertext, tag = cipher.encrypt_and_digest(payload.encode("utf-8"))
+        ciphertext, tag = cipher.encrypt_and_digest(payload)
 
         # Either build compact serialization or initialize our local structures for JSON
         encoded_iv = base64url_encode(iv)

@@ -4,6 +4,7 @@ import base64
 from enum import Enum
 
 from jwk import JWK
+from jwt import parse_jwt
 
 def base64url_encode(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
@@ -49,6 +50,9 @@ class JWS:
         add_kids = True,
         alg = None
     ):
+        # To resolve circulat imports we import JWE here
+        from jwe import JWE
+
         if isinstance(signaturekeys, list):
             # Validate if we have multiple signatures (only supports JSON serialization)
             for sk in signaturekeys:
@@ -84,15 +88,15 @@ class JWS:
                 payloadcontenttype = "application/octet-stream"
         # ToDo: Add JWS, JWK
         elif isinstance(payload, JWS):
-            payload = payload.to_json().encode("utf-8")
+            payload = base64url_encode(payload.to_json().encode("utf-8"))
             if payloadcontenttype is not False:
                 payloadcontenttype = "JWT"
-#        elif isinstance(payload, JWE):
-#            payload = payload.to_json().encode("utf-8")
-#            if payloadcontenttype is not False:
-#                payloadcontenttype = "JWT"
+        elif isinstance(payload, JWE):
+            payload = base64url_encode(payload.to_json().encode("utf-8"))
+            if payloadcontenttype is not False:
+                payloadcontenttype = "JWT"
         elif isinstance(payload, JWK):
-            payload = payload.to_json().encode("utf-8")
+            payload = base64url_encode(payload.to_json().encode("utf-8"))
             if payloadcontenttype is not False:
                 payloadcontenttype = "jwk+json"
         else:
@@ -330,6 +334,11 @@ class JWS:
         payloadparsed = None
         if (cty == "application/json") or (cty == "text/json"):
             payloadparsed = json.loads(base64url_decode(jsondata["payload"]))
+        if (cty == "JWT"):
+            payloadparsed = parse_jwt(base64url_decode(jsondata["payload"]), keystore)
+        if cty == "jwk+json":
+            payloadparsed = JWK.from_json(base64url_decode(jsondata["payload"]))
+        # ToDo: Parse other types
 
         return JWS(
             payloadparsed,

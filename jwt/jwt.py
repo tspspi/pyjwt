@@ -1,9 +1,6 @@
 import json
 import base64
 
-from jws import JWS
-from jwe import JWE
-
 # Generic wrapper around JWS and JWE to allow parsing both
 # automatically determining their typ. This is used internally
 # when deserializing ...
@@ -16,6 +13,10 @@ def base64url_decode(data):
     return base64.urlsafe_b64decode(data + padding)
 
 def parse_jwt(data, keystore = None):
+    # We do imports here to prevent circular import loops
+    from jws import JWS
+    from jwe import JWE
+
     if isinstance(data, str):
         # Check if we are one of the compact serializations
         parts = data.split(".")
