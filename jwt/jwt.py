@@ -16,6 +16,7 @@ def parse_jwt(data, keystore = None):
     # We do imports here to prevent circular import loops
     from jws import JWS
     from jwe import JWE
+    from jwk import JWK
 
     if isinstance(data, str):
         # Check if we are one of the compact serializations
@@ -28,13 +29,19 @@ def parse_jwt(data, keystore = None):
             return JWE.parse(data, keystore)
 
     if not isinstance(data, dict):
-        # We either have a compact serialization or 
-        # a JSON string. First try to split at dots
+        # We either have a compact serialization that we
+        # did not recognize or  a JSON string. Try to load
+        # the JSON
         jdata = json.loads(data)
     else:
         jdata = data
 
     if "protected" not in jdata:
+        # Check if it may be a JWK ...
+        if "kty" in jdata:
+            # This may be a JWK ...
+            return JWK.from_json(jdata)
+
         # This is not a supported datatype
         raise ValueError("Not a supported JWT")
     phdr = json.loads(base64url_decode(jdata["protected"]))
@@ -42,8 +49,6 @@ def parse_jwt(data, keystore = None):
         return JWE.parse(data, keystore)
     elif ("typ" in phdr) and (phdr["typ"] == "JWT"):
         return JWS.parse(data, keystore)
-
-    # ToDo: Can it also be a JWK?
 
     raise ValueError("Not a supported JWT")
         
