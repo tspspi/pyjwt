@@ -131,3 +131,16 @@ class Keystore:
 
             yield k
 
+    def to_json(self, indent = None, include_private = False):
+        pass
+
+    def to_jwk(self, include_private = False):
+        pass
+
+    def store(self, filename, include_private = False):
+        pass
+
+    @staticmethod
+    def load(filename):
+        pass
+
