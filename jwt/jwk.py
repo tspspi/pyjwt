@@ -105,6 +105,9 @@ class JWK:
         # Call the implementation
         return self._verify(payload, signature, alg = alg)
 
+    def to_json(self, indent = None):
+        raise NotImplementedError("JSON serialization is not implemented by this class")
+
     @staticmethod
     def from_json(jdata):
         # We check which algorithm is specified in the JWK
