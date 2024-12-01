@@ -21,6 +21,15 @@ Each JWK can have:
 * An optional ```alg``` parameter that limits the usage of the key
   for a given algorithm.
 
+## Currently supported algorithms
+
+| Class | Algorithm | Usage |
+| --- | --- | --- |
+| ```JWK_Shared``` | ```HS256```, ```HS384```, ```HS512``` | ```sign```, ```verify``` |
+| ```JWK_RSA``` | ```PS256```, ```PS384```, ```PS512``` | ```sign```, ```verify``` |
+| ```JWK_RSA``` | ```RS256```, ```RS384```, ```RS512``` | ```sign```, ```verify``` |
+| ```JWK_RSA``` | ```RSA1_5```, ```RSA-OAEP```, ```RSA-OAEP-256``` | ```encrypt```, ```decrypt``` |
+
 ## Generic interface
 
 ```
@@ -28,6 +37,11 @@ class JWK:
    def get_id(self)
    def sign(self, payload, alg = None)
    def verify(self, payload, signature, alg = None)
+   def encrypt(self, payload, alg = None)
+   def decrypt(self, payload, alg = None)
+
+   @staticmethod
+   def from_json(jdata)
 ```
 
 ## Shared Key / Octet
@@ -37,7 +51,8 @@ a shared key. Those operations are more performant than public key
 schemas but require the key to be present on all components of the
 system. In contrast to public key schemas this increases the attack
 surface (number of components that can leak a key that is capable
-of signing tokens). Signatures are usually smaller.
+of signing tokens). Signatures are usually smaller and verification
+as well as signature a little bit faster.
 
 ```
 class JWK_Shared:
@@ -65,6 +80,10 @@ newkey = JWK_Shared.create("my shared key")
 
 ## RSA Keys
 
+RSA keys support PSS and PKCS#1 v1.5 signatures as well as RSA-OAEP and PKCS#1 v1.5
+encryption. It's prefered to use PSS and RSA-OAEP-256 (those are also the default algorithms).
+RSA is more secure to shared keys in most cases.
+
 ```
 class JWK_RSA:
    def get_sign_alg(self)
@@ -80,6 +99,10 @@ class JWK_RSA:
 Creating a new RSA key:
 
 ```
-newkey = JWK_RSA()
+newkey = JWK_RSA.create(
+    bits = 4096,
+    key_id = "Test Key",
+    key_ops = [ "sign", "verify", "encrypt", "decrypt" ]
+)
 ```
 
