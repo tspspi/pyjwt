@@ -69,6 +69,11 @@ This method has two parameters.
 ks.store(filename, include_private = False)
 ```
 
+### Loading from a File
+```
+Keystore.load(filename)
+```
+
 ```
 Keystore.load(filename)
 ```

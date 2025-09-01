@@ -78,5 +78,5 @@ idea to use the generic ```parse_jwt``` method when one parses a JWT though.
 
 ## ToDo
 
-* Implementing key expiration and other specified flags during validation
-* Allowing access to valid state of all signatures from outside without accessing private variables
+* Implement key expiration and other specified flags during validation
+* Allow access to the valid state of all signatures from outside without accessing private variables

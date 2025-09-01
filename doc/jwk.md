@@ -33,15 +33,17 @@ Each JWK can have:
 ## Generic interface
 
 ```
+```python
 class JWK:
-   def get_id(self)
-   def sign(self, payload, alg = None)
-   def verify(self, payload, signature, alg = None)
-   def encrypt(self, payload, alg = None)
-   def decrypt(self, payload, alg = None)
+    def get_id(self)
+    def sign(self, payload, alg = None)
+    def verify(self, payload, signature, alg = None)
+    def encrypt(self, payload, alg = None)
+    def decrypt(self, payload, alg = None)
 
-   @staticmethod
-   def from_json(jdata)
+    @staticmethod
+    def from_json(jdata)
+```
 ```
 
 ## Shared Key / Octet

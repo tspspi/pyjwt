@@ -14,9 +14,9 @@ Currently this module supports the following content encryption mechanisms:
 
 ## Encrypting payload
 
-Encrypting new data can be done using the ```create``` method. Note that in compact
-serialization only a single recipient can be used, in JSON serialization multiple
-recipients can be utilized.
+Encrypting new data can be done using the `create` method. Note that in compact
+serialization, only a single recipient can be used, whereas in JSON serialization,
+multiple recipients can be utilized.
 
 ```
 JWE.create(
@@ -61,7 +61,7 @@ JSON is returned but only a compact string.
 
 ## Parsing
 
-One can explicitly parse a JWE utilizing the static ```parse``` method:
+One can explicitly parse a JWE using the static `parse` method:
 
 ```
 JWE.parse(
