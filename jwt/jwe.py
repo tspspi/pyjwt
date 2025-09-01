@@ -5,7 +5,7 @@ from jwk import JWK
 
 from Cryptodome.Random import get_random_bytes
 from Cryptodome.Cipher import AES
-from Cryptodome.Hash import SHA1, SHA256, SHA384, SHA512, HMAC
+#from Cryptodome.Hash import SHA1, SHA256, SHA384, SHA512, HMAC
 
 def base64url_encode(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
@@ -85,7 +85,7 @@ class JWE:
                     raise ValueError("enc property not defined in protected header, not a JWE")
 
                 if phdr["enc"] not in [ "A128GCM", "A192GCM", "A256GCM" ]:
-                    raise ValueError(f"Content encryption algorithm {enc} not supported")
+                    raise ValueError(f"Content encryption algorithm {phdr['enc']} not supported")
 
                 cty = None
                 if "cty" in phdr:
@@ -176,14 +176,12 @@ class JWE:
         if "protected" not in jdata:
             raise ValueError("Protected header not found")
 
-        protected_header = jdata["protected"]
-
         phdr = json.loads(base64url_decode(jdata["protected"]))
         if "enc" not in phdr:
             raise ValueError("Protected header has no enc property, not a JWE")
 
         if phdr["enc"] not in [ "A128GCM", "A192GCM", "A256GCM" ]:
-            raise ValueError(f"Content encryption algorithm {enc} not supported")
+            raise ValueError(f"Content encryption algorithm {phdr['enc']} not supported")
 
         iv = base64url_decode(jdata["iv"])
         ciphertext = base64url_decode(jdata["ciphertext"])

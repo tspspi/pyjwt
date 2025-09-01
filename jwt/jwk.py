@@ -2,7 +2,7 @@ import json
 import base64
 
 from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_v1_5, PKCS1_OAEP, AES
+from Cryptodome.Cipher import PKCS1_v1_5, PKCS1_OAEP #, AES
 from Cryptodome.Signature import pss, pkcs1_15 as pkcs1_15_sig
 from Cryptodome.Hash import SHA1, SHA256, SHA384, SHA512, HMAC
 from Cryptodome.Random import get_random_bytes
@@ -232,7 +232,7 @@ class JWK_Shared(JWK):
             try:
                 h.verify(signature)
                 return JWSValidation.VALID
-            except ValueError as e:
+            except ValueError:
                 return JWSValidation.INVALID
         elif alg == "HS384":
             h = HMAC.new(self._secret, digestmod=SHA384) 
@@ -240,7 +240,7 @@ class JWK_Shared(JWK):
             try:
                 h.verify(signature)
                 return JWSValidation.VALID
-            except ValueError as e:
+            except ValueError:
                 return JWSValidation.INVALID
         elif alg == "HS512":
             h = HMAC.new(self._secret, digestmod=SHA512) 
@@ -248,7 +248,7 @@ class JWK_Shared(JWK):
             try:
                 h.verify(signature)
                 return JWSValidation.VALID
-            except ValueError as e:
+            except ValueError:
                 return JWSValidation.INVALID
         else:
             return JWSValidation.INVALID
@@ -406,7 +406,7 @@ class JWK_RSA(JWK):
             try:
                 pss.new(self._key).verify(h, signature)
                 return JWSValidation.VALID
-            except ValueError as e:
+            except ValueError:
                 return JWSValidation.INVALID
         elif alg == "PS384":
             # SHA384, PSS
@@ -414,7 +414,7 @@ class JWK_RSA(JWK):
             try:
                 pss.new(self._key).verify(h, signature)
                 return JWSValidation.VALID
-            except ValueError as e:
+            except ValueError:
                 return JWSValidation.INVALID
         elif alg == "PS512":
             # SHA512, PSS
@@ -422,7 +422,7 @@ class JWK_RSA(JWK):
             try:
                 pss.new(self._key).verify(h, signature)
                 return JWSValidation.VALID
-            except ValueError as e:
+            except ValueError:
                 return JWSValidation.INVALID
         elif alg == "RS256":
             # SHA256, PKCS#1 v1.5
