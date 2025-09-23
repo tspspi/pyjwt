@@ -32,13 +32,13 @@ JWE.create(
 ```
 
 * ```payload``` is the payload that should be supported. Different payload types
-  are threatened differently:
+  are treated differently:
    * ```dict``` is serialized into a JSON dictionary, if no ```cty``` is specified
      it is set to ```application/json```
    * ```JWS``` and ```JWE``` is properly serialized and the ```cty``` set to ```JWT```
    * ```str``` is encoded as raw string, the ```cty``` is set to ```text/plain```
-   * A ```bytes``` payload is base64 encoded, the ```cty``` is set to ```application/octet-stream```
-   * ```JWK``` is serialized properly, ```cty``` is set to ```json+jwk```
+   * A ```bytes``` payload is used as provided (no extra base64 layer), the ```cty``` is set to ```application/octet-stream```
+   * ```JWK``` is serialized properly, ```cty``` is set to ```jwk+json```
 * ```recipient_keys``` can be either a single key or a list of keys for which the
   encryption should be performed. These should either be JWKs that contain public keys
   or a shared key of a recipient.
@@ -78,5 +78,4 @@ to decrypt the payload if possible. In case no key is found there is no decrypte
 ```
 jwe.get_payload()
 ```
-
 

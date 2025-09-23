@@ -11,7 +11,7 @@ def base64url_encode(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
 
 def base64url_decode(data):
-    padding = '=' * (4 - (len(data) % 4))
+    padding = '=' * (-len(data) % 4)
     return base64.urlsafe_b64decode(data + padding)
 
 class JWE:
@@ -133,23 +133,23 @@ class JWE:
                     cipher = AES.new(cek, AES.MODE_GCM, nonce = iv)
                     cipher.update(parts[0].encode("utf-8"))
                     decrypted_payload = cipher.decrypt_and_verify(ciphertext, tag)
-                    decrypted_payload = base64url_decode(decrypted_payload)
 
                 if (cty is not None) and (decrypted_payload is not None):
+                    if isinstance(decrypted_payload, bytes):
+                        decrypted_payload_text = decrypted_payload.decode("utf-8")
+                    else:
+                        decrypted_payload_text = decrypted_payload
+
                     if cty == "application/json":
-                        if not isinstance(decrypted_payload, str):
-                            decrypted_payload = decrypted_payload.decode("utf-8")
-                        decrypted_payload = json.loads(decrypted_payload)
+                        decrypted_payload = json.loads(decrypted_payload_text)
                     elif cty == "JWT":
                         from jwt import parse_jwt
-                        if not isinstance(decrypted_payload, str):
-                            decrypted_payload = decrypted_payload.decode("utf-8")
-                        decrypted_payload = parse_jwt(decrypted_payload, keystore)
+                        decrypted_payload = parse_jwt(decrypted_payload_text, keystore)
                     elif cty == "jwk+json":
                         from jwk import JWK
-                        if not isinstance(decrypted_payload, str):
-                            decrypted_payload = decrypted_payload.decode("utf-8")
-                        decrypted_payload = JWK.from_json(decrypted_payload)
+                        decrypted_payload = JWK.from_json(decrypted_payload_text)
+                    elif cty == "text/plain":
+                        decrypted_payload = decrypted_payload_text
 
                 return JWE(
                     parts[0],
@@ -236,23 +236,23 @@ class JWE:
             cipher = AES.new(cek, AES.MODE_GCM, nonce = iv)
             cipher.update(jdata["protected"].encode("utf-8"))
             decrypted_payload = cipher.decrypt_and_verify(ciphertext, tag)
-            decrypted_payload = decrypted_payload.decode("utf-8")
 
         if (cty is not None) and (decrypted_payload is not None):
+            if isinstance(decrypted_payload, bytes):
+                decrypted_payload_text = decrypted_payload.decode("utf-8")
+            else:
+                decrypted_payload_text = decrypted_payload
+
             if cty == "application/json":
-                if not isinstance(decrypted_payload, str):
-                    decrypted_payload = decrypted_payload.decode("utf-8")
-                decrypted_payload = json.loads(base64url_decode(decrypted_payload))
+                decrypted_payload = json.loads(decrypted_payload_text)
             elif cty == "JWT":
                 from jwt import parse_jwt
-                if not isinstance(decrypted_payload, str):
-                    decrypted_payload = decrypted_payload.decode("utf-8")
-                decrypted_payload = parse_jwt(decrypted_payload, keystore)
+                decrypted_payload = parse_jwt(decrypted_payload_text, keystore)
             elif cty == "jwk+json":
                 from jwk import JWK
-                if not isinstance(decrypted_payload, str):
-                    decrypted_payload = decrypted_payload.decode("utf-8")
-                decrypted_payload = JWK.from_json(decrypted_payload)
+                decrypted_payload = JWK.from_json(decrypted_payload_text)
+            elif cty == "text/plain":
+                decrypted_payload = decrypted_payload_text
 
         return JWE(
             jdata["protected"],
@@ -325,7 +325,7 @@ class JWE:
 
         payload_raw = payload
         if isinstance(payload, dict):
-            payload = base64url_encode(json.dumps(payload).encode("utf-8")).encode("utf-8")
+            payload = json.dumps(payload).encode("utf-8")
         elif isinstance(payload, JWS) or isinstance(payload, JWE):
             payload = payload.to_json().encode("utf-8")
         elif isinstance(payload, str):
