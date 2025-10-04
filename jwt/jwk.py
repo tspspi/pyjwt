@@ -27,8 +27,8 @@ class JWK:
         if kty not in [ "EC", "RSA", "oct" ]:
             raise ValueError(f"Unsupported key type {kty}, only supporting EC, RSA and oct")
 
-        if (use is not None) and (key_ops is not None):
-            raise ValueError("Only use or key_ops can be used at the same time")
+#        if (use is not None) and (key_ops is not None):
+#            raise ValueError("Only use or key_ops can be used at the same time")
 
         if (use is not None) and (use not in [ "sig", "enc" ]):
             raise ValueError(f"Unsupported usage {use}, supported values are sig and enc")
@@ -628,7 +628,7 @@ class JWK_RSA(JWK):
         if not isinstance(jsondata, dict):
             jsondata = json.loads(jsondata)
 
-        if ("kty" not in jsondata) or ("n" not in jsondata) or ("d" not in jsondata) or (("use" not in jsondata) and ("key_ops" not in jsondata)):
+        if ("kty" not in jsondata) or ("n" not in jsondata) or ("e" not in jsondata) or (("use" not in jsondata) and ("key_ops" not in jsondata)):
             raise ValueError("Invalid JSON object for RSA key (missing kty, n, d, use or key_ops)")
         if jsondata["kty"].upper() != "RSA":
             raise ValueError(f"Key type {jsondata['kty']} is not RSA, cannot parse RSA object")
