@@ -36,6 +36,14 @@ def parse_jwt(data, keystore = None):
     else:
         jdata = data
 
+    if isinstance(jdata, dict):
+        if ("payload" in jdata) and ("signatures" in jdata):
+            # General JSON JWS serialisation
+            return JWS.parse(json.dumps(jdata), keystore)
+        if ("recipients" in jdata) and ("ciphertext" in jdata):
+            # General JSON JWE serialisation
+            return JWE.parse(json.dumps(jdata), keystore)
+
     if "protected" not in jdata:
         # Check if it may be a JWK ...
         if "kty" in jdata:
