@@ -1,7 +1,7 @@
 import json
 import base64
 
-from jwk import JWK
+from jwt.jwk import JWK
 
 from Cryptodome.Random import get_random_bytes
 from Cryptodome.Cipher import AES
@@ -143,10 +143,10 @@ class JWE:
                     if cty == "application/json":
                         decrypted_payload = json.loads(decrypted_payload_text)
                     elif cty == "JWT":
-                        from jwt import parse_jwt
+                        from jwt.jwt import parse_jwt
                         decrypted_payload = parse_jwt(decrypted_payload_text, keystore)
                     elif cty == "jwk+json":
-                        from jwk import JWK
+                        from jwt.jwk import JWK
                         decrypted_payload = JWK.from_json(decrypted_payload_text)
                     elif cty == "text/plain":
                         decrypted_payload = decrypted_payload_text
@@ -246,10 +246,10 @@ class JWE:
             if cty == "application/json":
                 decrypted_payload = json.loads(decrypted_payload_text)
             elif cty == "JWT":
-                from jwt import parse_jwt
+                from jwt.jwt import parse_jwt
                 decrypted_payload = parse_jwt(decrypted_payload_text, keystore)
             elif cty == "jwk+json":
-                from jwk import JWK
+                from jwt.jwk import JWK
                 decrypted_payload = JWK.from_json(decrypted_payload_text)
             elif cty == "text/plain":
                 decrypted_payload = decrypted_payload_text
@@ -284,7 +284,7 @@ class JWE:
         typ = "JWT"
     ):
         # We import here to resolve problems with circular imports
-        from jws import JWS
+        from jwt.jws import JWS
 
         # Validate parameters
         if not isinstance(recipient_keys, list):

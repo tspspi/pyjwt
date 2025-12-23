@@ -14,9 +14,9 @@ def base64url_decode(data):
 
 def parse_jwt(data, keystore = None):
     # We do imports here to prevent circular import loops
-    from jws import JWS
-    from jwe import JWE
-    from jwk import JWK
+    from jwt.jws import JWS
+    from jwt.jwe import JWE
+    from jwt.jwk import JWK
 
     if isinstance(data, str):
         # Check if we are one of the compact serializations

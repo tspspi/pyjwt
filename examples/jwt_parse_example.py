@@ -1,7 +1,7 @@
-from jwt import parse_jwt
-from keystore import Keystore
-from jwk import JWK_Shared
-from jws import JWS
+from jwt.jwt import parse_jwt
+from jwt.keystore import Keystore
+from jwt.jwk import JWK_Shared
+from jwt.jws import JWS
 
 # This example demonstrates how to create and parse a JSON Web Token (JWT).
 # A JWT is a compact, URL-safe means of representing claims to be transferred between two parties.

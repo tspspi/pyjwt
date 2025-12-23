@@ -1,10 +1,10 @@
-from jws import JWS
-from keystore import Keystore
+from jwt.jws import JWS
+from jwt.keystore import Keystore
 
 # This example demonstrates how to create and parse a JSON Web Signature (JWS).
 # A JWS is a compact, URL-safe means of representing signed content using JSON-based data structures.
 
-from jwk import JWK_Shared
+from jwt.jwk import JWK_Shared
 
 # Sample payload
 payload = {"sub": "1234567890", "name": "John Doe", "admin": True}

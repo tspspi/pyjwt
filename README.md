@@ -26,9 +26,9 @@ For more detailed information, please refer to the [documentation](./doc/).
 This example demonstrates how to create and parse a JSON Web Encryption (JWE).
 
 ```python
-from jwe import JWE
-from keystore import Keystore
-from jwk import JWK_RSA
+from jwt.jwe import JWE
+from jwt.keystore import Keystore
+from jwt.jwk import JWK_RSA
 
 # Sample payload
 payload = {"sub": "1234567890", "name": "John Doe", "admin": True}
@@ -52,7 +52,7 @@ print("Parsed Payload:", json.dumps(parsed_jwe.get_payload(), indent=2))
 This example demonstrates how to encrypt and decrypt data using JSON Web Key (JWK).
 
 ```python
-from jwk import JWK_RSA
+from jwt.jwk import JWK_RSA
 
 # Sample payload
 payload = b"This is a secret message."
@@ -74,9 +74,9 @@ print("Decrypted Payload:", decrypted_payload.decode('utf-8'))
 This example demonstrates how to create and parse a JSON Web Signature (JWS).
 
 ```python
-from jws import JWS
-from keystore import Keystore
-from jwk import JWK_Shared
+from jwt.jws import JWS
+from jwt.keystore import Keystore
+from jwt.jwk import JWK_Shared
 
 # Sample payload
 payload = {"sub": "1234567890", "name": "John Doe", "admin": True}
@@ -102,10 +102,10 @@ print("Parsed Payload:", parsed_jws.get_payload())
 This example demonstrates how to create and parse a JSON Web Token (JWT).
 
 ```python
-from jwt import parse_jwt
-from keystore import Keystore
-from jwk import JWK_Shared
-from jws import JWS
+from jwt.jwt import parse_jwt
+from jwt.keystore import Keystore
+from jwt.jwk import JWK_Shared
+from jwt.jws import JWS
 
 # Create a JWK for signing
 jwk = JWK_Shared.create(secret=b"my-secret-key", use="sig", key_id="test-key")

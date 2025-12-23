@@ -3,8 +3,8 @@ import base64
 
 from enum import Enum
 
-from jwk import JWK
-from jwt import parse_jwt
+from jwt.jwk import JWK
+from jwt.jwt import parse_jwt
 
 def base64url_encode(data):
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
@@ -51,7 +51,7 @@ class JWS:
         alg = None
     ):
         # To resolve circulat imports we import JWE here
-        from jwe import JWE
+        from jwt.jwe import JWE
 
         if isinstance(signaturekeys, list):
             # Validate if we have multiple signatures (only supports JSON serialization)

@@ -1,8 +1,8 @@
-from jwe import JWE
-from jws import JWS
-from keystore import Keystore
-from jwk import JWK_RSA
-from jwt import parse_jwt
+from jwt.jwe import JWE
+from jwt.jws import JWS
+from jwt.keystore import Keystore
+from jwt.jwk import JWK_RSA
+from jwt.jwt import parse_jwt
 import json
 
 # This example demonstrates JWE with multiple recipients and nested JWS signature.

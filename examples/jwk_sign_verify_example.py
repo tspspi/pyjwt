@@ -1,9 +1,9 @@
-from jwk import JWK
+from jwt.jwk import JWK
 
 # This example demonstrates how to sign and verify data using JSON Web Key (JWK).
 # A JWK is a JSON data structure that represents a cryptographic key.
 
-from jwk import JWK_Shared
+from jwt.jwk import JWK_Shared
 
 # Sample payload
 payload = b"This is a message to be signed."

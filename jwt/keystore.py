@@ -1,4 +1,4 @@
-from jwk import JWK
+from jwt.jwk import JWK
 
 class Keystore:
     """

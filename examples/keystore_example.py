@@ -1,9 +1,9 @@
-from keystore import Keystore
+from jwt.keystore import Keystore
 
 # This example demonstrates how to add keys and iterate over keys in a keystore.
 # A keystore is a secure storage for cryptographic keys.
 
-from jwk import JWK_Shared
+from jwt.jwk import JWK_Shared
 
 # Create a keystore
 keystore = Keystore()

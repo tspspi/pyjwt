@@ -1,10 +1,10 @@
-from jwk import JWK
+from jwt.jwk import JWK
 
 # This example demonstrates how to encrypt and decrypt data using JSON Web Key (JWK).
 # A JWK is a JSON data structure that represents a cryptographic key.
 # Note: Shared secret keys (oct) do not support encryption - only RSA keys do.
 
-from jwk import JWK_RSA
+from jwt.jwk import JWK_RSA
 
 # Sample payload
 payload = b"This is a secret message."

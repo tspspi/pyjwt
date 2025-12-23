@@ -1,7 +1,7 @@
 import json
-from jwe import JWE
-from keystore import Keystore
-from jwk import JWK_RSA
+from jwt.jwe import JWE
+from jwt.keystore import Keystore
+from jwt.jwk import JWK_RSA
 
 # This example demonstrates how to create and parse a JSON Web Encryption (JWE).
 # A JWE is a compact, URL-safe means of representing encrypted content using JSON-based data structures.

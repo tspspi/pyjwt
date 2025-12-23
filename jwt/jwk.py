@@ -205,7 +205,7 @@ class JWK_Shared(JWK):
             raise ValueError(f"Alg parameter contains unknown algorithm {self._alg}")
 
     def _verify(self, payload, signature, alg = None):
-        from jws import JWSValidation
+        from jwt.jws import JWSValidation
         # "alg" for RSA can be:
         #   HS256       SHA256
         #   HS384       SHA384
@@ -369,7 +369,7 @@ class JWK_RSA(JWK):
             return self._alg_enc_default
 
     def _verify(self, payload, signature, alg = None):
-        from jws import JWSValidation
+        from jwt.jws import JWSValidation
         # "alg" for RSA can be:
         #   PS256       PSS, SHA256
         #   PS384       PSS, SHA384
